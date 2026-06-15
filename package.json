@@ -1,0 +1,64 @@
+{
+    "name": "kycli",
+    "version": "0.1.0",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "bin": {
+        "kycli": "./dist/bin.js"
+    },
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./cli": {
+            "types": "./dist/cli.d.ts",
+            "import": "./dist/cli.js"
+        },
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "package.json"
+    ],
+    "scripts": {
+        "build": "rm -rf dist && tsc -p tsconfig.build.json && cp -R src/templates dist/templates",
+        "test": "bun test tests/*.test.ts",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "citty": "^0.2.2",
+        "jiti": "^2.7.0",
+        "kysely": "^0.29.2"
+    },
+    "peerDependencies": {
+        "kysely-neon": "^2",
+        "kysely-postgres-js": "^3",
+        "pg": "^8",
+        "kysely-prisma-postgres": "^0.1"
+    },
+    "peerDependenciesMeta": {
+        "kysely-neon": {
+            "optional": true
+        },
+        "kysely-postgres-js": {
+            "optional": true
+        },
+        "pg": {
+            "optional": true
+        },
+        "kysely-prisma-postgres": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "@types/node": "latest",
+        "kysely-neon": "^2",
+        "kysely-postgres-js": "^3",
+        "kysely-prisma-postgres": "^0.1",
+        "typescript": "^5.9.3"
+    }
+}

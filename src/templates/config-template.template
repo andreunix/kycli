@@ -1,0 +1,22 @@
+import { PostgresDialect } from 'kysely'
+import { defineConfig } from 'kycli'
+import { Pool } from 'pg'
+
+export default defineConfig({
+	// replace me with a real dialect instance OR a dialect name + `dialectConfig` prop.
+	dialect: new PostgresDialect({
+		pool: new Pool({
+			connectionString: process.env.DATABASE_URL,
+		}),
+	}),
+	// typegen: {
+	//   source: "migrations",
+	// },
+	//   migrations: {
+	//     migrationFolder: "migrations",
+	//   },
+	//   plugins: [],
+	//   seeds: {
+	//     seedFolder: "seeds",
+	//   }
+})
