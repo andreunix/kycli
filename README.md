@@ -61,7 +61,6 @@ export default defineConfig({
 `gen:types` writes:
 
 - `src/db/types.ts`
-- `src/@types/db.d.ts`
 
 It reads migration files by default. Use `database` when you want generated types to reflect the live database schema.
 

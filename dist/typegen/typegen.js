@@ -4,7 +4,6 @@ import { consola } from '../utils/logger.js';
 import { safeReaddir } from '../utils/safe-readdir.js';
 import { usingKysely } from '../kysely/using-kysely.js';
 const INDENT = '\t';
-const DOUBLE_INDENT = '\t\t';
 const GENERATED_HEADER = [
     '// Auto-generated. Do not edit manually.',
     '// Regenerate with: kycli gen:types',
@@ -68,13 +67,9 @@ export async function runTypegen(config, source = config.typegen.source) {
 }
 async function writeArtifacts(cwd, tables) {
     const typesOutput = generateTypes(tables);
-    const dbDeclarationsOutput = generateDbDeclarations(tables);
     const outputFile = resolve(cwd, 'src/db/types.ts');
-    const outputDbDeclarationsFile = resolve(cwd, 'src/@types/db.d.ts');
     await mkdir(dirname(outputFile), { recursive: true });
-    await mkdir(dirname(outputDbDeclarationsFile), { recursive: true });
     await writeFile(outputFile, typesOutput, 'utf8');
-    await writeFile(outputDbDeclarationsFile, dbDeclarationsOutput, 'utf8');
 }
 export async function getTablesFromMigrations(config) {
     const tables = new Map();
@@ -224,26 +219,6 @@ function generateTypes(tables) {
     for (const table of tables.values()) {
         lines.push(`${INDENT}${table.name}: ${toPascalCase(table.name)}Table;`);
     }
-    lines.push('}');
-    lines.push('');
-    return lines.join('\n');
-}
-function generateDbDeclarations(tables) {
-    const lines = [...GENERATED_HEADER, 'export {};', '', 'declare global {', `${INDENT}namespace DB {`];
-    const tableList = [...tables.values()];
-    for (const [index, table] of tableList.entries()) {
-        const typeName = toPascalCase(table.name);
-        lines.push(`${DOUBLE_INDENT}export type ${typeName} = {`);
-        for (const column of table.columns.values()) {
-            const type = column.nullable ? `${column.tsType} | null` : column.tsType;
-            lines.push(`${DOUBLE_INDENT}${INDENT}${column.name}: ${type};`);
-        }
-        lines.push(`${DOUBLE_INDENT}};`);
-        if (index < tableList.length - 1) {
-            lines.push('');
-        }
-    }
-    lines.push(`${INDENT}}`);
     lines.push('}');
     lines.push('');
     return lines.join('\n');

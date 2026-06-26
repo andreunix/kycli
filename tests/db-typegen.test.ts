@@ -135,15 +135,19 @@ describe("db typegen", () => {
     await runTypegen(config, "migrations")
 
     const types = await readFile(resolve(cwd, "src/db/types.ts"), "utf8")
-    const declarations = await readFile(resolve(cwd, "src/@types/db.d.ts"), "utf8")
+    let generatedDbDeclarations = true
+    try {
+      await readFile(resolve(cwd, "src/@types/db.d.ts"), "utf8")
+    } catch {
+      generatedDbDeclarations = false
+    }
 
     expect(types).toContain('import type { Generated } from "kysely";')
     expect(types).toContain("export interface UsersTable")
     expect(types).toContain("id: Generated<number>;")
     expect(types).toContain("email: string | null;")
     expect(types).toContain("created_at: Generated<Date | null>;")
-    expect(declarations).toContain("namespace DB")
-    expect(declarations).toContain("export type Users = {")
+    expect(generatedDbDeclarations).toBe(false)
   })
 
   test("omits Generated import when no generated columns are present", async () => {
