@@ -7,6 +7,7 @@ import type { Seeder, SeederProps, SeedProvider } from '../seeds/seeder.js';
 import type { GetConfigArgs } from './get-config.js';
 type SetRequired<T, K extends keyof T> = T & Required<Pick<T, K>>;
 export type TypegenSource = 'migrations' | 'database';
+export type TypegenDecimalMode = 'number' | 'string';
 export type KyselyDialect = ResolvableKyselyDialect | KyselyDialectInstance;
 export type ResolvableKyselyDialect = KyselyCoreDialect | KyselyOrganizationDialect;
 export type KyselyCoreDialect = 'pg' | 'mysql2' | 'tedious' | 'better-sqlite3' | 'pglite';
@@ -89,6 +90,7 @@ export interface ResolvedKycliConfig {
     dialectConfig?: OrFactory<KyselyDialectConfig<ResolvableKyselyDialect>>;
     kysely?: OrFactory<Kysely<any>>;
     typegen: SetRequired<TypegenBaseConfig, 'source'> & {
+        decimalMode: TypegenDecimalMode;
         source: TypegenSource;
     };
     migrations: SetRequired<MigrationsBaseConfig, 'getMigrationPrefix'> & {
@@ -113,6 +115,7 @@ export type MigrationsBaseConfig = Omit<MigratorProps, 'db' | 'provider'> & {
  * Configuracao do gerador de tipos.
  */
 export type TypegenBaseConfig = {
+    decimalMode?: TypegenDecimalMode;
     source?: TypegenSource;
 };
 export type SeedsBaseConfig = Omit<SeederProps, 'db' | 'provider'> & {

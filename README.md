@@ -45,6 +45,7 @@ export default defineConfig({
     }),
   }),
   typegen: {
+    decimalMode: "string",
     source: "migrations",
   },
   migrations: {
@@ -63,6 +64,8 @@ export default defineConfig({
 - `src/db/types.ts`
 
 It reads migration files by default. Use `database` when you want generated types to reflect the live database schema.
+
+`decimalMode` controls how `decimal`, `numeric`, and `money` columns are emitted. The default is `"string"` to avoid precision loss; set it to `"number"` if your schema only stores values that are safe for JavaScript numbers. `json` and `jsonb` columns are emitted as `JsonValue`.
 
 ## Supported Dialects
 

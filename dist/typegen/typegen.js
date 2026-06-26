@@ -22,7 +22,6 @@ const SQL_TO_TS = {
     date: 'Date',
     datetime: 'Date',
     datetime2: 'Date',
-    decimal: 'number',
     double: 'number',
     'double precision': 'number',
     float: 'number',
@@ -33,13 +32,11 @@ const SQL_TO_TS = {
     int4: 'number',
     int8: 'number',
     integer: 'number',
-    json: 'unknown',
-    jsonb: 'unknown',
+    json: 'JsonValue',
+    jsonb: 'JsonValue',
     longblob: 'Uint8Array',
     mediumblob: 'Uint8Array',
     mediumint: 'number',
-    money: 'number',
-    numeric: 'number',
     real: 'number',
     serial: 'number',
     smallint: 'number',
@@ -133,7 +130,7 @@ export async function getTablesFromMigrations(config) {
                         name: columnName,
                         nullable: !block.includes('.notNull()') && !block.includes('.primaryKey()'),
                         primaryKey: block.includes('.primaryKey()'),
-                        tsType: sqlTypeToTs(sqlType),
+                        tsType: sqlTypeToTs(sqlType, config.typegen.decimalMode ?? 'string'),
                     });
                 }
             }
@@ -162,7 +159,7 @@ export async function getTablesFromDatabase(config) {
                     name: column.name,
                     nullable: column.isNullable,
                     primaryKey: column.name === 'id',
-                    tsType: sqlTypeToTs(column.dataType),
+                    tsType: sqlTypeToTs(column.dataType, config.typegen.decimalMode ?? 'string'),
                 });
             }
             tables.set(table.name, tableInfo);
@@ -182,11 +179,16 @@ function getAddColumnBlock(lines, startIndex) {
     }
     return { block: blockLines.join('\n'), endIndex: lines.length - 1 };
 }
-function sqlTypeToTs(sqlType) {
+function sqlTypeToTs(sqlType, decimalMode) {
     const normalized = sqlType
         .toLowerCase()
         .replace(/\(.*\)/, '')
         .trim();
+    if (normalized === 'decimal' ||
+        normalized === 'money' ||
+        normalized === 'numeric') {
+        return decimalMode;
+    }
     return SQL_TO_TS[normalized] ?? 'unknown';
 }
 function isGeneratedSqlType(sqlType) {
@@ -200,9 +202,13 @@ function toPascalCase(value) {
 }
 function generateTypes(tables) {
     const shouldImportGenerated = [...tables.values()].some((table) => [...table.columns.values()].some((column) => column.generated));
+    const shouldDefineJsonValue = [...tables.values()].some((table) => [...table.columns.values()].some((column) => column.tsType === 'JsonValue'));
     const lines = [...GENERATED_HEADER];
     if (shouldImportGenerated) {
         lines.push('import type { Generated } from "kysely";', '');
+    }
+    if (shouldDefineJsonValue) {
+        lines.push('export type JsonValue =', `${INDENT}| string`, `${INDENT}| number`, `${INDENT}| boolean`, `${INDENT}| null`, `${INDENT}| JsonValue[]`, `${INDENT}| { [key: string]: JsonValue };`, '');
     }
     for (const table of tables.values()) {
         const interfaceName = `${toPascalCase(table.name)}Table`;

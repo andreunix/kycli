@@ -3,7 +3,11 @@ import { dirname, join, resolve } from 'node:path'
 import { consola } from '../utils/logger.js'
 import { safeReaddir } from '../utils/safe-readdir.js'
 import { usingKysely } from '../kysely/using-kysely.js'
-import type { ResolvedKycliConfig, TypegenSource } from '../config/kycli-config.js'
+import type {
+	ResolvedKycliConfig,
+	TypegenDecimalMode,
+	TypegenSource,
+} from '../config/kycli-config.js'
 
 export type ColumnInfo = {
 	generated: boolean
@@ -38,7 +42,6 @@ const SQL_TO_TS: Record<string, string> = {
 	date: 'Date',
 	datetime: 'Date',
 	datetime2: 'Date',
-	decimal: 'number',
 	double: 'number',
 	'double precision': 'number',
 	float: 'number',
@@ -49,13 +52,11 @@ const SQL_TO_TS: Record<string, string> = {
 	int4: 'number',
 	int8: 'number',
 	integer: 'number',
-	json: 'unknown',
-	jsonb: 'unknown',
+	json: 'JsonValue',
+	jsonb: 'JsonValue',
 	longblob: 'Uint8Array',
 	mediumblob: 'Uint8Array',
 	mediumint: 'number',
-	money: 'number',
-	numeric: 'number',
 	real: 'number',
 	serial: 'number',
 	smallint: 'number',
@@ -186,7 +187,7 @@ export async function getTablesFromMigrations(
 						name: columnName,
 						nullable: !block.includes('.notNull()') && !block.includes('.primaryKey()'),
 						primaryKey: block.includes('.primaryKey()'),
-						tsType: sqlTypeToTs(sqlType),
+						tsType: sqlTypeToTs(sqlType, config.typegen.decimalMode ?? 'string'),
 					})
 				}
 			}
@@ -222,7 +223,10 @@ export async function getTablesFromDatabase(
 					name: column.name,
 					nullable: column.isNullable,
 					primaryKey: column.name === 'id',
-					tsType: sqlTypeToTs(column.dataType),
+					tsType: sqlTypeToTs(
+						column.dataType,
+						config.typegen.decimalMode ?? 'string',
+					),
 				})
 			}
 
@@ -252,11 +256,22 @@ function getAddColumnBlock(
 	return { block: blockLines.join('\n'), endIndex: lines.length - 1 }
 }
 
-function sqlTypeToTs(sqlType: string): string {
+function sqlTypeToTs(
+	sqlType: string,
+	decimalMode: TypegenDecimalMode,
+): string {
 	const normalized = sqlType
 		.toLowerCase()
 		.replace(/\(.*\)/, '')
 		.trim()
+
+	if (
+		normalized === 'decimal' ||
+		normalized === 'money' ||
+		normalized === 'numeric'
+	) {
+		return decimalMode
+	}
 
 	return SQL_TO_TS[normalized] ?? 'unknown'
 }
@@ -279,10 +294,26 @@ function generateTypes(tables: Map<string, TableInfo>): string {
 	const shouldImportGenerated = [...tables.values()].some((table) =>
 		[...table.columns.values()].some((column) => column.generated),
 	)
+	const shouldDefineJsonValue = [...tables.values()].some((table) =>
+		[...table.columns.values()].some((column) => column.tsType === 'JsonValue'),
+	)
 	const lines: string[] = [...GENERATED_HEADER]
 
 	if (shouldImportGenerated) {
 		lines.push('import type { Generated } from "kysely";', '')
+	}
+
+	if (shouldDefineJsonValue) {
+		lines.push(
+			'export type JsonValue =',
+			`${INDENT}| string`,
+			`${INDENT}| number`,
+			`${INDENT}| boolean`,
+			`${INDENT}| null`,
+			`${INDENT}| JsonValue[]`,
+			`${INDENT}| { [key: string]: JsonValue };`,
+			'',
+		)
 	}
 
 	for (const table of tables.values()) {

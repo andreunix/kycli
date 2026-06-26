@@ -60,6 +60,7 @@ export async function getConfig(
 		configMetadata: { configFile },
 		cwd: configPath,
 		typegen: {
+			decimalMode: 'string',
 			source: config.typegen?.source ?? 'migrations',
 			...config.typegen,
 		},

@@ -54,6 +54,13 @@ class FakeIntrospector {
             isNullable: true,
             name: "profile",
           },
+          {
+            dataType: "numeric",
+            hasDefaultValue: false,
+            isAutoIncrementing: false,
+            isNullable: false,
+            name: "balance",
+          },
         ],
         isForeign: false,
         isView: false,
@@ -95,6 +102,7 @@ async function createTempProject() {
     destroyOnExit: false,
     dialect: "pg",
     typegen: {
+      decimalMode: "string",
       source: "migrations",
     },
     migrations: {
@@ -126,6 +134,7 @@ describe("db typegen", () => {
         '\t\t.addColumn("email", "varchar(255)")',
         '\t\t.addColumn("created_at", "timestamp with time zone", (column) => column.defaultTo(sql`now()`))',
         '\t\t.addColumn("profile", "jsonb")',
+        '\t\t.addColumn("balance", "decimal(12, 2)")',
         "\t\t.execute()",
         "}",
       ].join("\n"),
@@ -147,7 +156,37 @@ describe("db typegen", () => {
     expect(types).toContain("id: Generated<number>;")
     expect(types).toContain("email: string | null;")
     expect(types).toContain("created_at: Generated<Date | null>;")
+    expect(types).toContain("export type JsonValue =")
+    expect(types).toContain("profile: JsonValue | null;")
+    expect(types).toContain("balance: string | null;")
     expect(generatedDbDeclarations).toBe(false)
+  })
+
+  test("can generate decimal columns as numbers", async () => {
+    const { config, cwd, migrationsFolder } = await createTempProject()
+
+    config.typegen.decimalMode = "number"
+
+    await writeFile(
+      join(migrationsFolder, "001_decimal.ts"),
+      [
+        'import type { Kysely } from "kysely"',
+        "",
+        "export async function up(db: Kysely<never>): Promise<void> {",
+        "\tawait db.schema",
+        '\t\t.createTable("payments")',
+        '\t\t.addColumn("amount", "numeric")',
+        "\t\t.execute()",
+        "}",
+      ].join("\n"),
+      "utf8",
+    )
+
+    await runTypegen(config, "migrations")
+
+    const types = await readFile(resolve(cwd, "src/db/types.ts"), "utf8")
+
+    expect(types).toContain("amount: number | null;")
   })
 
   test("omits Generated import when no generated columns are present", async () => {
@@ -190,7 +229,8 @@ describe("db typegen", () => {
     const types = await readFile(resolve(databaseConfig.cwd, "src/db/types.ts"), "utf8")
     expect(types).toContain("id: Generated<number>;")
     expect(types).toContain("created_at: Generated<Date>;")
-    expect(types).toContain("profile: unknown | null;")
+    expect(types).toContain("profile: JsonValue | null;")
+    expect(types).toContain("balance: string;")
     expect(types).not.toContain("users_view")
   })
 });

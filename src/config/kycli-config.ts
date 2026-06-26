@@ -22,6 +22,7 @@ import type { GetConfigArgs } from './get-config.js'
 type SetRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
 export type TypegenSource = 'migrations' | 'database'
+export type TypegenDecimalMode = 'number' | 'string'
 
 export type KyselyDialect = ResolvableKyselyDialect | KyselyDialectInstance
 
@@ -155,6 +156,7 @@ export interface ResolvedKycliConfig {
 	// biome-ignore lint/suspicious/noExplicitAny: `any` is required here, for now.
 	kysely?: OrFactory<Kysely<any>>
 	typegen: SetRequired<TypegenBaseConfig, 'source'> & {
+		decimalMode: TypegenDecimalMode
 		source: TypegenSource
 	}
 	migrations: SetRequired<MigrationsBaseConfig, 'getMigrationPrefix'> & {
@@ -186,6 +188,7 @@ export type MigrationsBaseConfig = Omit<MigratorProps, 'db' | 'provider'> & {
  * Configuracao do gerador de tipos.
  */
 export type TypegenBaseConfig = {
+	decimalMode?: TypegenDecimalMode
 	source?: TypegenSource
 }
 
